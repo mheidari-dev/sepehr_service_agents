@@ -1,4 +1,4 @@
-<?php defined('ABSPATH') || exit; ?>
+<?php defined('ABSPATH') || exit; $sav_error = sav_current_notice('error'); ?>
 <!doctype html>
 <html lang="fa">
 <head>
@@ -18,8 +18,8 @@
     <?php elseif (is_user_logged_in()): ?>
       <div class="sav-alert">شما وارد شده‌اید اما دسترسی لازم برای این بخش را ندارید.</div>
     <?php endif; ?>
-    <?php if (!empty($_SESSION['sav_error'])): ?>
-      <div class="sav-alert"><?php echo esc_html($_SESSION['sav_error']); unset($_SESSION['sav_error']); ?></div>
+    <?php if ($sav_error): ?>
+      <div class="sav-alert"><?php echo esc_html($sav_error); ?></div>
     <?php endif; ?>
     <form method="post">
       <?php wp_nonce_field('sav_login_nonce', 'sav_login_nonce'); ?>

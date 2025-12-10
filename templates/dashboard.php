@@ -9,6 +9,8 @@ $users = get_users([
   'order'      => 'DESC',
 ]);
 $u = wp_get_current_user();
+$sav_notice = sav_current_notice('message');
+$sav_error  = sav_current_notice('error');
 
 /** ویرایش نماینده */
 $edit = null;
@@ -60,20 +62,19 @@ if (isset($_GET['edit'])) {
     <?php endif; ?>
   </ul>
 
-  <!-- تب نمایندگان -->
-   <?php if (!empty($_SESSION['sav_message'])): ?>
-  <div class="alert alert-success alert-dismissible fade show">
-    <?php echo esc_html($_SESSION['sav_message']); unset($_SESSION['sav_message']); ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-<?php endif; ?>
-<?php if (!empty($_SESSION['sav_error'])): ?>
-  <div class="alert alert-danger alert-dismissible fade show">
-    <?php echo esc_html($_SESSION['sav_error']); unset($_SESSION['sav_error']); ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-<?php endif; ?> 
-
+    <!-- تب نمایندگان -->
+    <?php if ($sav_notice): ?>
+      <div class="alert alert-success alert-dismissible fade show">
+        <?php echo esc_html($sav_notice); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    <?php endif; ?>
+    <?php if ($sav_error): ?>
+      <div class="alert alert-danger alert-dismissible fade show">
+        <?php echo esc_html($sav_error); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    <?php endif; ?>
 
 
   <div class="tab-pane fade show active" id="tab-agents">

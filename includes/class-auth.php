@@ -34,9 +34,7 @@ class SAV_Auth {
       $password = (string)($_POST['password'] ?? '');
 
       if ($username === '' || $password === '') {
-        $_SESSION['sav_error'] = 'نام کاربری یا رمز عبور خالی است.';
-        wp_safe_redirect(home_url('/service-agent-management'));
-        exit;
+        sav_redirect_with_notice('/service-agent-management', 'error', 'نام کاربری یا رمز عبور خالی است.');
       }
 
       $user = wp_signon([
@@ -46,17 +44,13 @@ class SAV_Auth {
       ], false);
 
       if (is_wp_error($user)) {
-        $_SESSION['sav_error'] = $user->get_error_message();
-        wp_safe_redirect(home_url('/service-agent-management'));
-        exit;
+        sav_redirect_with_notice('/service-agent-management', 'error', $user->get_error_message());
       }
 
       // چک دسترسی به داشبورد
       if (!user_can($user, 'manage_service_agents')) {
         wp_logout();
-        $_SESSION['sav_error'] = 'دسترسی لازم برای ورود به این بخش را ندارید.';
-        wp_safe_redirect(home_url('/service-agent-management'));
-        exit;
+        sav_redirect_with_notice('/service-agent-management', 'error', 'دسترسی لازم برای ورود به این بخش را ندارید.');
       }
 
       update_user_meta($user->ID, 'sav_last_login', current_time('mysql'));
