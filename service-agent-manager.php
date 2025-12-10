@@ -33,9 +33,29 @@ require_once SAV_PATH . 'includes/class-auth.php';
 require_once SAV_PATH . 'includes/functions.php';
 require_once SAV_PATH . 'includes/class-jdate.php';
 
+function sav_register_roles_and_caps() {
+    $caps = [
+        'manage_service_agents'       => true,
+        'manage_service_agent_users'  => true,
+        'read'                        => true,
+    ];
+
+    add_role('service_agent_manager', 'Service Agent Manager', array_merge($caps, [
+        'upload_files' => true,
+    ]));
+
+    if ($admin = get_role('administrator')) {
+        foreach (array_keys($caps) as $cap) {
+            $admin->add_cap($cap);
+        }
+    }
+}
+
 // فعال‌سازی پلاگین
 register_activation_hook( __FILE__, [ 'SAV_DB', 'activate' ] );
 register_activation_hook( __FILE__, 'sav_create_upload_dir' );
+register_activation_hook( __FILE__, 'sav_register_roles_and_caps' );
+add_action('init', 'sav_register_roles_and_caps');
 
 function sav_create_upload_dir() 
     {

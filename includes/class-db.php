@@ -31,37 +31,11 @@ class SAV_DB {
     ) $charset;";
     dbDelta($sql_agents);
 
-    $admins = $wpdb->prefix.'service_agents_admins';
-    $sql_admins = "CREATE TABLE IF NOT EXISTS `$admins` (
-      `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      `username` VARCHAR(50) NOT NULL,
-      `password` VARCHAR(255) NOT NULL,
-      `full_name` VARCHAR(100) NULL,
-      `role` ENUM('admin','editor') DEFAULT 'editor',
-      `status` ENUM('active','inactive') DEFAULT 'active',
-      `last_login` DATETIME NULL,
-      `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE KEY `uk_username` (`username`)
-    ) $charset;";
-    dbDelta($sql_admins);
-
-    $count = intval($wpdb->get_var("SELECT COUNT(*) FROM `$admins`"));
-    if ($count===0){
-      $wpdb->insert($admins,[
-        'username'=>'admin',
-        'password'=>wp_hash_password('admin123'),
-        'full_name'=>'System Admin',
-        'role'=>'admin',
-        'status'=>'active'
-      ]);
-    }
   }
   public static function ensure(){
     global $wpdb;
     $a = $wpdb->prefix.'service_agents';
-    $u = $wpdb->prefix.'service_agents_admins';
     $a_ok = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s',$a))===$a);
-    $u_ok = ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s',$u))===$u);
-    if(!$a_ok || !$u_ok){ self::activate(); }
+    if(!$a_ok){ self::activate(); }
   }
 }

@@ -4,52 +4,25 @@ if (!defined('ABSPATH')) exit;
 class SAV_Auth {
 
   public static function init(){
-    // مطمئن شو سشن بالا هست
-    // add_action('init', function () {
-    //   if (!session_id()) {
-    //     session_start();
-    //   }
-    // }, 1);
-
     add_action('init',[__CLASS__,'handle_login']);
     add_action('init',[__CLASS__,'handle_logout']);
   }
 
   // آیا لاگین هست؟
   public static function is_logged_in(){
-    return !empty($_SESSION['sav_logged_in']) && !empty($_SESSION['sav_user_id']);
+    return is_user_logged_in();
   }
 
-  // گرفتن کاربر جاری از جدول اختصاصی
+  // گرفتن کاربر جاری از وردپرس
   public static function current_user(){
     if (!self::is_logged_in()) return null;
-    global $wpdb;
-    $t = $wpdb->prefix.'service_agents_admins';
-    $id = intval($_SESSION['sav_user_id']);
-    if (!$id) return null;
-
-    // با id و active بگیر
-    $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM `$t` WHERE `id`=%d AND `status`='active'", $id));
-    if (!$row) {
-      // اگر به هر دلیل کاربر حذف شده بود، سشن را خالی کن
-      self::logout_session();
-      return null;
-    }
-    return $row;
+    $user = wp_get_current_user();
+    return ($user && $user->exists()) ? $user : null;
   }
 
   // بررسی دسترسی
   public static function user_can($cap){
-    $u = self::current_user(); 
-    if (!$u) return false;
-
-    $map = [
-      'view_dashboard' => ['admin','editor'],
-      'manage_agents'  => ['admin','editor'],
-      'manage_users'   => ['admin'],
-    ];
-    $allowed = isset($map[$cap]) ? $map[$cap] : ['admin'];
-    return in_array($u->role, $allowed, true);
+    return current_user_can($cap);
   }
 
   // هندل لاگین
@@ -66,51 +39,39 @@ class SAV_Auth {
         exit;
       }
 
-      global $wpdb;
-      $t = $wpdb->prefix.'service_agents_admins';
+      $user = wp_signon([
+        'user_login'    => $username,
+        'user_password' => $password,
+        'remember'      => true,
+      ], false);
 
-      $row = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM `$t` WHERE `username`=%s AND `status`='active'",
-        $username
-      ));
-
-      if ($row && wp_check_password($password, $row->password)) {
-        // قبل از گذاشتن کاربر جدید، سشن قبلی را پاک کن
-        self::logout_session(false);
-
-        $_SESSION['sav_logged_in'] = true;
-        $_SESSION['sav_user_id']   = intval($row->id);
-        $_SESSION['sav_username']  = $row->username; // فقط برای نمایش
-
-        // ثبت آخرین ورود
-        $wpdb->update($t, ['last_login' => current_time('mysql')], ['id' => $row->id]);
-
-        wp_safe_redirect(home_url('/service-agent-management/dashboard'));
-        exit;
-      } else {
-        $_SESSION['sav_error'] = 'نام کاربری یا رمز عبور اشتباه است.';
+      if (is_wp_error($user)) {
+        $_SESSION['sav_error'] = $user->get_error_message();
         wp_safe_redirect(home_url('/service-agent-management'));
         exit;
       }
+
+      // چک دسترسی به داشبورد
+      if (!user_can($user, 'manage_service_agents')) {
+        wp_logout();
+        $_SESSION['sav_error'] = 'دسترسی لازم برای ورود به این بخش را ندارید.';
+        wp_safe_redirect(home_url('/service-agent-management'));
+        exit;
+      }
+
+      update_user_meta($user->ID, 'sav_last_login', current_time('mysql'));
+
+      wp_safe_redirect(home_url('/service-agent-management/dashboard'));
+      exit;
     }
   }
 
   // هندل خروج
   public static function handle_logout(){
     if (isset($_GET['sav_logout'])) {
-      self::logout_session();
+      wp_logout();
       wp_safe_redirect(home_url('/service-agent-management'));
       exit;
-    }
-  }
-
-  // پاک کردن سشن
-  protected static function logout_session($destroy = true){
-    $_SESSION['sav_logged_in'] = false;
-    unset($_SESSION['sav_user_id'], $_SESSION['sav_username']);
-    if ($destroy) {
-      // اختیاری: کل سشن را نابود کن
-       session_destroy();
     }
   }
 }
