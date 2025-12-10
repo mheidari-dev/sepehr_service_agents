@@ -44,7 +44,7 @@ add_action('init', function(){
 
   switch ($_POST['sav_action']) {
   case 'agent_save':
-    if (!current_user_can('manage_service_agents')) { wp_die('Forbidden'); }
+    if (!current_user_can('sav_agent_save')) { wp_die('Forbidden'); }
     $id = intval($_POST['id'] ?? 0);
     
     // فقط sanitize تاریخ
@@ -118,7 +118,7 @@ add_action('init', function(){
     exit;
 
     case 'agent_delete':
-    if (!current_user_can('manage_service_agents')) { wp_die('Forbidden'); }
+    if (!current_user_can('sav_agent_delete')) { wp_die('Forbidden'); }
     $id = intval($_POST['id'] ?? 0);
     if ($id) {
         $photo_url = $wpdb->get_var($wpdb->prepare("SELECT photo_url FROM `{$wpdb->prefix}service_agents` WHERE id=%d", $id));
@@ -135,7 +135,7 @@ add_action('init', function(){
     exit;
 
     case 'user_save':
-      if (!current_user_can('manage_service_agent_users')) { wp_die('Forbidden'); }
+      if (!current_user_can('sav_user_save')) { wp_die('Forbidden'); }
       $username   = sanitize_user($_POST['username'] ?? '');
       $full_name  = sanitize_text_field($_POST['full_name'] ?? '');
       $role       = in_array(($_POST['role'] ?? 'editor'), ['administrator','editor','service_agent_manager'], true) ? $_POST['role'] : 'editor';
@@ -184,7 +184,7 @@ add_action('init', function(){
       exit;
 
     case 'user_delete':
-      if (!current_user_can('manage_service_agent_users')) { wp_die('Forbidden'); }
+      if (!current_user_can('sav_user_delete')) { wp_die('Forbidden'); }
       $id = intval($_POST['id'] ?? 0);
       if ($id>0) {
         if (get_current_user_id() === $id) {
