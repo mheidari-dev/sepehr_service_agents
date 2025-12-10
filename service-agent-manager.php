@@ -33,6 +33,7 @@ require_once SAV_PATH . 'includes/class-auth.php';
 require_once SAV_PATH . 'includes/functions.php';
 require_once SAV_PATH . 'includes/class-jdate.php';
 require_once SAV_PATH . 'includes/class-capabilities.php';
+require_once SAV_PATH . 'includes/admin/pages.php';
 
 // فعال‌سازی پلاگین
 register_activation_hook( __FILE__, [ 'SAV_DB', 'activate' ] );
