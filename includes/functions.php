@@ -4,6 +4,27 @@ if (!defined('ABSPATH')) exit;
 
 function sav_panel_url($path=''){ $b = home_url('/service-agent-management'); return trailingslashit($b).ltrim($path,'/'); }
 
+function sav_build_redirect_url($path, array $args = []){
+  $url = home_url($path);
+  return !empty($args) ? add_query_arg($args, $url) : $url;
+}
+
+function sav_redirect_with_notice($path, $type, $message, array $extra_args = []){
+  $key = $type === 'error' ? 'sav_error' : 'sav_message';
+  $message = sanitize_text_field($message);
+  if ($message !== '') {
+    $extra_args[$key] = $message;
+  }
+
+  wp_safe_redirect(sav_build_redirect_url($path, $extra_args));
+  exit;
+}
+
+function sav_current_notice($type){
+  $key = $type === 'error' ? 'sav_error' : 'sav_message';
+  return isset($_GET[$key]) ? sanitize_text_field(wp_unslash($_GET[$key])) : '';
+}
+
 add_action('init', function(){
   if (class_exists('SAV_DB')) { SAV_DB::ensure(); }
   add_rewrite_rule('^service-agent-management/?$','index.php?sav_page=login','top');
@@ -17,7 +38,21 @@ add_action('template_redirect', function(){
   $page = get_query_var('sav_page');
   $token= get_query_var('agent_token');
   if ($page){
-    if ($page==='dashboard' && (!is_user_logged_in() || !current_user_can('manage_service_agents'))){ wp_safe_redirect(home_url('/service-agent-management')); exit; }
+    if ($page==='dashboard'){
+      if (!is_user_logged_in()){
+        sav_redirect_with_notice('/service-agent-management', 'error', __('برای دسترسی به داشبورد وارد شوید.', 'sav'));
+      }
+
+      if (!current_user_can('manage_service_agents')){
+        sav_redirect_with_notice('/service-agent-management', 'error', __('شما دسترسی لازم برای مشاهده داشبورد را ندارید.', 'sav'));
+      }
+    }
+
+    if ($page==='login' && is_user_logged_in() && current_user_can('manage_service_agents')){
+      wp_safe_redirect(home_url('/service-agent-management/dashboard'));
+      exit;
+    }
+
     $file = SAV_PATH.'templates/'.$page.'.php';
     if (file_exists($file)){ include $file; exit; }
   }
@@ -50,9 +85,7 @@ add_action('init', function(){
     // فقط sanitize تاریخ
     $valid_until = !empty($_POST['valid_until']) ? sanitize_text_field($_POST['valid_until']) : null;
     if ($valid_until && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $valid_until)) {
-        $_SESSION['sav_error'] = 'فرمت تاریخ نامعتبر است.';
-        wp_safe_redirect(home_url('/service-agent-management/dashboard'));
-        exit;
+        sav_redirect_with_notice('/service-agent-management/dashboard', 'error', 'فرمت تاریخ نامعتبر است.');
     }
 
     $data = [
@@ -98,9 +131,7 @@ add_action('init', function(){
                 $data['photo_url'] = $movefile['url']; // fallback
             }
         } else {
-            $_SESSION['sav_error'] = 'خطا در آپلود تصویر: ' . ($movefile['error'] ?? 'نامشخص');
-            wp_safe_redirect(home_url('/service-agent-management/dashboard'));
-            exit;
+            sav_redirect_with_notice('/service-agent-management/dashboard', 'error', 'خطا در آپلود تصویر: ' . ($movefile['error'] ?? 'نامشخص'));
         }
     } else {
         $data['photo_url'] = $old_photo; // نگه داشتن عکس قبلی
@@ -143,9 +174,7 @@ add_action('init', function(){
       $password   = (string)($_POST['password'] ?? '');
 
       if ($username === '') {
-        $_SESSION['sav_error'] = 'نام کاربری الزامی است.';
-        wp_safe_redirect(home_url('/service-agent-management/dashboard'));
-        exit;
+        sav_redirect_with_notice('/service-agent-management/dashboard', 'error', 'نام کاربری الزامی است.');
       }
 
       $user_id = username_exists($username);
@@ -171,9 +200,7 @@ add_action('init', function(){
       }
 
       if (is_wp_error($result)) {
-        $_SESSION['sav_error'] = $result->get_error_message();
-        wp_safe_redirect(home_url('/service-agent-management/dashboard'));
-        exit;
+        sav_redirect_with_notice('/service-agent-management/dashboard', 'error', $result->get_error_message());
       }
 
       if ($user_id) {
@@ -188,12 +215,16 @@ add_action('init', function(){
       $id = intval($_POST['id'] ?? 0);
       if ($id>0) {
         if (get_current_user_id() === $id) {
-          $_SESSION['sav_error'] = 'امکان حذف کاربر فعلی وجود ندارد.';
+          sav_redirect_with_notice('/service-agent-management/dashboard', 'error', 'امکان حذف کاربر فعلی وجود ندارد.');
         } else {
           wp_delete_user($id);
         }
       }
-      if (!empty($wpdb->last_error)) { $_SESSION['sav_error']='DB Error: '.$wpdb->last_error; }
+
+      if (!empty($wpdb->last_error)) {
+        sav_redirect_with_notice('/service-agent-management/dashboard', 'error', 'DB Error: ' . $wpdb->last_error);
+      }
+
       wp_safe_redirect(home_url('/service-agent-management/dashboard')); exit;
   }
 });
@@ -331,20 +362,18 @@ add_action('init', function() {
             error_log("CSV uploaded to: " . $target_file);
             $result = sav_import_agents_from_csv($target_file);
             if ($result['success']) {
-                $_SESSION['sav_message'] = "موفقیت: {$result['count']} نماینده ایمپورت شد.";
+                sav_redirect_with_notice('/service-agent-management/dashboard', 'message', "موفقیت: {$result['count']} نماینده ایمپورت شد.");
             } else {
                 error_log("Import error: " . $result['error']);
-                $_SESSION['sav_error'] = "خطا: " . $result['error'];
+                sav_redirect_with_notice('/service-agent-management/dashboard', 'error', "خطا: " . $result['error']);
             }
         } else {
             error_log("Upload failed. Error code: " . $_FILES['csv_file']['error']);
-            $_SESSION['sav_error'] = "خطا در آپلود فایل. کد خطا: " . $_FILES['csv_file']['error'];
+            sav_redirect_with_notice('/service-agent-management/dashboard', 'error', "خطا در آپلود فایل. کد خطا: " . $_FILES['csv_file']['error']);
         }
     } else {
         error_log("No CSV file uploaded");
-        $_SESSION['sav_error'] = "هیچ فایلی آپلود نشد";
+        sav_redirect_with_notice('/service-agent-management/dashboard', 'error', "هیچ فایلی آپلود نشد");
     }
-    wp_safe_redirect(home_url('/service-agent-management/dashboard'));
-    exit;
 }
 });
