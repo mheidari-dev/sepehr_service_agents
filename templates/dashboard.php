@@ -3,12 +3,11 @@ if (!is_user_logged_in() || !current_user_can('manage_service_agents')) { wp_saf
 global $wpdb;
 
 $agents = $wpdb->get_results("SELECT * FROM `{$wpdb->prefix}service_agents` ORDER BY id DESC");
-$user_query = new WP_User_Query([
+$users = get_users([
   'capability' => 'manage_service_agents',
   'orderby'    => 'ID',
   'order'      => 'DESC',
 ]);
-$users = $user_query->get_results();
 $u = wp_get_current_user();
 
 /** ویرایش نماینده */
