@@ -1,0 +1,75 @@
+/* --- Light Theme --- */
+:root {
+  --bg:#f6f7fb;
+  --card:#ffffff;
+  --txt:#17181c;
+  --muted:#6b6f7b;
+  --border:#e5e7ef;
+  --ok:#17a673;
+  --danger:#e03a3a;
+}
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--txt); margin:0}
+
+/* تیتر جدول و کارت‌ها */
+.sav-table th{background:#f0f2f8; color:#2d3553}
+.sav-login-card,
+.sav-header,
+.sav-box,
+.sav-table{background:var(--card); border:1px solid var(--border)}
+.sav-btn{background:#f8f9fc; color:var(--txt); border:1px solid var(--border)}
+.sav-btn-primary{background:#2d6df6; border:0}
+.sav-tab{background:#fff; border:1px solid var(--border)}
+.sav-tab-active{outline:2px solid #2d6df6}
+
+
+/* Minimal, clean UI */
+:root { --bg:#0b0b10; --card:#14141c; --muted:#8b8da1; --border:#2a2a36; --ok:#18b26b; --danger:#e74343; --txt:#e9e9f0; }
+*{box-sizing:border-box} body{background:var(--bg); color:var(--txt); font-family:Tahoma, Arial, sans-serif; margin:0;direction: rtl;}
+
+.sav-login-body{display:flex; min-height:100vh; align-items:center; justify-content:center;}
+.sav-login-card{background:var(--card); padding:28px; border:1px solid var(--border); border-radius:14px; width:min(420px,92vw);}
+.sav-login-card h2{margin:0 0 16px}
+.sav-login-card label{display:block; font-size:13px; color:var(--muted); margin:10px 0 6px}
+.sav-login-card input{width:100%; padding:10px 12px; background:#0f0f15; border:1px solid var(--border); border-radius:10px; color:var(--txt)}
+.sav-btn-primary{margin-top:14px; width:100%; padding:10px 12px; background:linear-gradient(90deg,#6b4bff,#9a6bff); border:0; border-radius:10px; color:white; cursor:pointer}
+.sav-help{margin-top:10px; color:var(--muted); font-size:12px}
+.sav-alert{background:#3a1320; border:1px solid #702342; color:#ffb3c7; padding:8px 10px; border-radius:10px; margin-bottom:10px}
+
+.sav-container{max-width:1200px; margin:24px auto; padding:0 16px;}
+.sav-header{display:flex; align-items:center; justify-content:space-between; padding:16px; border:1px solid var(--border); background:var(--card); border-radius:14px; margin-bottom:16px}
+.sav-user a{color:#b4b7ff}
+
+.sav-tabs{display:flex; gap:8px; margin-bottom:12px}
+.sav-tab{background:var(--card); border:1px solid var(--border); color:var(--txt); padding:8px 12px; border-radius:12px; cursor:pointer}
+.sav-tab-active{outline:2px solid #6b4bff}
+
+.sav-tab-pane{display:none}
+.sav-tab-pane-active{display:block}
+
+.sav-box{border:1px solid var(--border); background:var(--card); border-radius:14px; padding:12px; margin-bottom:16px}
+.sav-form .sav-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:12px}
+.sav-form input, .sav-form select{width:100%; padding:9px 10px; background:#0f0f15; border:1px solid var(--border); border-radius:10px; color:var(--txt)}
+
+.sav-table-wrap{overflow:auto}
+.sav-table{width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden}
+.sav-table th, .sav-table td{border-bottom:1px solid var(--border); padding:10px 12px; text-align:right; font-size:14px}
+.sav-table th{background:#161625; color:#cfd0ff}
+.sav-avatar{width:40px; height:40px; object-fit:cover; border-radius:8px}
+.sav-qr{width:70px; height:70px; border-radius:8px; background:#0f0f15; border:1px solid var(--border)}
+
+.sav-btn{padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:#181822; color:var(--txt); cursor:pointer}
+.sav-btn.danger{border-color:#5b1f2a; background:#2a0e12; color:#ffb3b3}
+
+.sav-badge{padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid var(--border)}
+.sav-badge.ok{background:#10251b; color:#88f0c1; border-color:#1e5d3f}
+.sav-badge.danger{background:#2a0e12; color:#ffb3b3; border-color:#5b1f2a}
+
+.sav-public-card{max-width:720px; margin:32px auto; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px}
+.sav-public-card.ok{box-shadow:0 0 0 1px rgba(24,178,107,.25) inset}
+.sav-public-card.danger{box-shadow:0 0 0 1px rgba(231,67,67,.25) inset}
+.sav-public-header{display:flex; gap:16px; align-items:center; margin-bottom:14px}
+.sav-avatar-xl{width:150px; height:150px; border-radius:14px; object-fit:cover}
+.sav-info-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; margin:12px 0 18px}
+.sav-qr-wrap{display:flex; gap:12px; align-items:center; justify-content:flex-start}
+.sav-note{color:var(--muted); font-size:12px}
