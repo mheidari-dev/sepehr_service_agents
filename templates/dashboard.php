@@ -1,10 +1,15 @@
 <?php defined('ABSPATH') || exit;
-if (!SAV_Auth::is_logged_in()) { wp_safe_redirect(home_url('/service-agent-management')); exit; }
+if (!is_user_logged_in() || !current_user_can('manage_service_agents')) { wp_safe_redirect(home_url('/service-agent-management')); exit; }
 global $wpdb;
 
 $agents = $wpdb->get_results("SELECT * FROM `{$wpdb->prefix}service_agents` ORDER BY id DESC");
-$users  = $wpdb->get_results("SELECT id,username,full_name,role,status,last_login FROM `{$wpdb->prefix}service_agents_admins` ORDER BY id DESC");
-$u = SAV_Auth::current_user();
+$user_query = new WP_User_Query([
+  'capability' => 'manage_service_agents',
+  'orderby'    => 'ID',
+  'order'      => 'DESC',
+]);
+$users = $user_query->get_results();
+$u = wp_get_current_user();
 
 /** ویرایش نماینده */
 $edit = null;
@@ -39,8 +44,8 @@ if (isset($_GET['edit'])) {
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0">پنل مدیریت نمایندگان</h4>
     <div>
-      سلام، <strong><?php echo esc_html($u->full_name ?: $u->username); ?></strong>
-      <a href="?sav_logout=1" class="btn btn-outline-danger btn-sm mx-2">خروج</a>
+      سلام، <strong><?php echo esc_html($u->display_name ?: $u->user_login); ?></strong>
+      <a href="<?php echo esc_url(wp_logout_url(home_url('/service-agent-management'))); ?>" class="btn btn-outline-danger btn-sm mx-2">خروج</a>
     </div>
   </div>
 
@@ -49,7 +54,7 @@ if (isset($_GET['edit'])) {
     <li class="nav-item">
       <button class="nav-link active" data-bs-target="#tab-agents">نمایندگان</button>
     </li>
-    <?php if (SAV_Auth::user_can('manage_users')): ?>
+    <?php if (current_user_can('manage_service_agent_users')): ?>
     <li class="nav-item">
       <button class="nav-link" data-bs-target="#tab-users">کاربران</button>
     </li>
@@ -228,7 +233,7 @@ if (isset($_GET['edit'])) {
   </div>
 
   <!-- تب کاربران -->
-  <?php if (SAV_Auth::user_can('manage_users')): ?>
+  <?php if (current_user_can('manage_service_agent_users')): ?>
   <div class="tab-pane fade" id="tab-users">
     <div class="card">
       <div class="card-header">مدیریت کاربران پنل</div>
@@ -239,7 +244,11 @@ if (isset($_GET['edit'])) {
           <div class="col-md-3"><input name="username" class="form-control" placeholder="نام کاربری *" required></div>
           <div class="col-md-3"><input name="full_name" class="form-control" placeholder="نام کامل"></div>
           <div class="col-md-2">
-            <select name="role" class="form-select"><option value="editor">ویرایشگر</option><option value="admin">مدیر</option></select>
+            <select name="role" class="form-select">
+              <option value="service_agent_manager">مدیر نمایندگان</option>
+              <option value="editor">ویرایشگر</option>
+              <option value="administrator">مدیرکل</option>
+            </select>
           </div>
           <div class="col-md-2">
             <select name="status" class="form-select"><option value="active">فعال</option><option value="inactive">غیرفعال</option></select>
@@ -253,19 +262,21 @@ if (isset($_GET['edit'])) {
           <tbody>
             <?php foreach ($users as $x): ?>
             <tr>
-              <td><?php echo intval($x->id); ?></td>
-              <td><?php echo esc_html($x->username); ?></td>
-              <td><?php echo esc_html($x->full_name); ?></td>
-              <td><?php echo esc_html($x->role); ?></td>
-              <td><?php echo esc_html($x->status); ?></td>
+              <td><?php echo intval($x->ID); ?></td>
+              <td><?php echo esc_html($x->user_login); ?></td>
+              <td><?php echo esc_html($x->display_name ?: $x->user_login); ?></td>
+              <td><?php echo esc_html(implode(', ', $x->roles)); ?></td>
+              <?php $status = get_user_meta($x->ID, 'sav_user_status', true) ?: 'active'; ?>
+              <td><?php echo esc_html($status); ?></td>
+              <?php $last_login = get_user_meta($x->ID, 'sav_last_login', true); ?>
               <td>
-                <?php echo $x->last_login ? esc_html(jdate('Y/m/d', strtotime(substr($x->last_login, 0, 10)))) : '—'; ?>
+                <?php echo $last_login ? esc_html(jdate('Y/m/d', strtotime(substr($last_login, 0, 10)))) : '—'; ?>
               </td>
               <td>
                 <form method="post" onsubmit="return confirm('حذف شود؟')">
                   <?php wp_nonce_field('sav_form_nonce', 'sav_form_nonce'); ?>
                   <input type="hidden" name="sav_action" value="user_delete">
-                  <input type="hidden" name="id" value="<?php echo intval($x->id); ?>">
+                  <input type="hidden" name="id" value="<?php echo intval($x->ID); ?>">
                   <button class="btn btn-sm btn-danger">حذف</button>
                 </form>
               </td>

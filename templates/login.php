@@ -10,6 +10,14 @@
 <body class="sav-login-body">
   <div class="sav-login-card">
     <h2>ورود به پنل نمایندگان</h2>
+    <?php if (!empty($_GET['loggedout'])): ?>
+      <div class="sav-alert sav-alert-success">با موفقیت خارج شدید.</div>
+    <?php endif; ?>
+    <?php if (is_user_logged_in() && current_user_can('manage_service_agents')): ?>
+      <div class="sav-alert sav-alert-success">شما قبلاً وارد شده‌اید. <a href="<?php echo esc_url(home_url('/service-agent-management/dashboard')); ?>">ورود به داشبورد</a></div>
+    <?php elseif (is_user_logged_in()): ?>
+      <div class="sav-alert">شما وارد شده‌اید اما دسترسی لازم برای این بخش را ندارید.</div>
+    <?php endif; ?>
     <?php if (!empty($_SESSION['sav_error'])): ?>
       <div class="sav-alert"><?php echo esc_html($_SESSION['sav_error']); unset($_SESSION['sav_error']); ?></div>
     <?php endif; ?>

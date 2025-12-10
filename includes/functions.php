@@ -17,7 +17,7 @@ add_action('template_redirect', function(){
   $page = get_query_var('sav_page');
   $token= get_query_var('agent_token');
   if ($page){
-    if ($page==='dashboard' && !SAV_Auth::is_logged_in()){ wp_safe_redirect(home_url('/service-agent-management')); exit; }
+    if ($page==='dashboard' && (!is_user_logged_in() || !current_user_can('manage_service_agents'))){ wp_safe_redirect(home_url('/service-agent-management')); exit; }
     $file = SAV_PATH.'templates/'.$page.'.php';
     if (file_exists($file)){ include $file; exit; }
   }
@@ -30,11 +30,10 @@ add_action('template_redirect', function(){
 // CRUD handler
 add_action('init', function(){
   if (!isset($_POST['sav_action'])) return;
-  if (!SAV_Auth::is_logged_in()) return;
+  if (!is_user_logged_in()) return;
   check_admin_referer('sav_form_nonce','sav_form_nonce');
   global $wpdb;
   $agents=$wpdb->prefix.'service_agents';
-  $admins=$wpdb->prefix.'service_agents_admins';
 
   $upload_photo = function($field){
     if (empty($_FILES[$field]['name'])) return null;
@@ -45,6 +44,7 @@ add_action('init', function(){
 
   switch ($_POST['sav_action']) {
   case 'agent_save':
+    if (!current_user_can('manage_service_agents')) { wp_die('Forbidden'); }
     $id = intval($_POST['id'] ?? 0);
     
     // فقط sanitize تاریخ
@@ -118,6 +118,7 @@ add_action('init', function(){
     exit;
 
     case 'agent_delete':
+    if (!current_user_can('manage_service_agents')) { wp_die('Forbidden'); }
     $id = intval($_POST['id'] ?? 0);
     if ($id) {
         $photo_url = $wpdb->get_var($wpdb->prepare("SELECT photo_url FROM `{$wpdb->prefix}service_agents` WHERE id=%d", $id));
@@ -134,23 +135,64 @@ add_action('init', function(){
     exit;
 
     case 'user_save':
-      if (!SAV_Auth::current_user() || !SAV_Auth::user_can('manage_users')) { wp_die('Forbidden'); }
-      $id = intval($_POST['id'] ?? 0);
-      $data=[
-        'username' => sanitize_user($_POST['username'] ?? ''),
-        'full_name'=> sanitize_text_field($_POST['full_name'] ?? ''),
-        'role'     => in_array(($_POST['role'] ?? 'editor'), ['admin','editor'], true) ? $_POST['role'] : 'editor',
-        'status'   => in_array(($_POST['status'] ?? 'active'), ['active','inactive'], true) ? $_POST['status'] : 'active',
-      ];
-      if (!empty($_POST['password'])) { $data['password'] = wp_hash_password($_POST['password']); }
-      if ($id>0) { $wpdb->update($admins,$data,['id'=>$id]); } else { $wpdb->insert($admins,$data); }
-      if (!empty($wpdb->last_error)) { $_SESSION['sav_error']='DB Error: '.$wpdb->last_error; }
-      wp_safe_redirect(home_url('/service-agent-management/dashboard')); exit;
+      if (!current_user_can('manage_service_agent_users')) { wp_die('Forbidden'); }
+      $username   = sanitize_user($_POST['username'] ?? '');
+      $full_name  = sanitize_text_field($_POST['full_name'] ?? '');
+      $role       = in_array(($_POST['role'] ?? 'editor'), ['administrator','editor','service_agent_manager'], true) ? $_POST['role'] : 'editor';
+      $status     = in_array(($_POST['status'] ?? 'active'), ['active','inactive'], true) ? $_POST['status'] : 'active';
+      $password   = (string)($_POST['password'] ?? '');
+
+      if ($username === '') {
+        $_SESSION['sav_error'] = 'نام کاربری الزامی است.';
+        wp_safe_redirect(home_url('/service-agent-management/dashboard'));
+        exit;
+      }
+
+      $user_id = username_exists($username);
+      if ($user_id) {
+        $userdata = ['ID' => $user_id];
+        if ($password !== '') { $userdata['user_pass'] = $password; }
+        $userdata['role'] = $role;
+        if ($full_name !== '') {
+          $userdata['display_name'] = $full_name;
+          $userdata['first_name']   = $full_name;
+        }
+        $result = wp_update_user($userdata);
+      } else {
+        $userdata = [
+          'user_login'   => $username,
+          'user_pass'    => $password !== '' ? $password : wp_generate_password(12),
+          'display_name' => $full_name ?: $username,
+          'first_name'   => $full_name,
+          'role'         => $role,
+        ];
+        $result = wp_insert_user($userdata);
+        $user_id = is_wp_error($result) ? 0 : $result;
+      }
+
+      if (is_wp_error($result)) {
+        $_SESSION['sav_error'] = $result->get_error_message();
+        wp_safe_redirect(home_url('/service-agent-management/dashboard'));
+        exit;
+      }
+
+      if ($user_id) {
+        update_user_meta($user_id, 'sav_user_status', $status);
+      }
+
+      wp_safe_redirect(home_url('/service-agent-management/dashboard'));
+      exit;
 
     case 'user_delete':
-      if (!SAV_Auth::current_user() || !SAV_Auth::user_can('manage_users')) { wp_die('Forbidden'); }
+      if (!current_user_can('manage_service_agent_users')) { wp_die('Forbidden'); }
       $id = intval($_POST['id'] ?? 0);
-      if ($id>0) { $wpdb->delete($admins,['id'=>$id]); }
+      if ($id>0) {
+        if (get_current_user_id() === $id) {
+          $_SESSION['sav_error'] = 'امکان حذف کاربر فعلی وجود ندارد.';
+        } else {
+          wp_delete_user($id);
+        }
+      }
       if (!empty($wpdb->last_error)) { $_SESSION['sav_error']='DB Error: '.$wpdb->last_error; }
       wp_safe_redirect(home_url('/service-agent-management/dashboard')); exit;
   }
@@ -275,7 +317,7 @@ function j2g($jy, $jm, $jd) {
 
 // هندل آپلود CSV
 add_action('init', function() {
-   if (isset($_POST['sav_import_csv']) && SAV_Auth::is_logged_in() && SAV_Auth::user_can('manage_agents')) {
+   if (isset($_POST['sav_import_csv']) && is_user_logged_in() && current_user_can('manage_service_agents')) {
     check_admin_referer('sav_import_csv', 'sav_import_nonce');
     
     if (!empty($_FILES['csv_file']['tmp_name'])) {
